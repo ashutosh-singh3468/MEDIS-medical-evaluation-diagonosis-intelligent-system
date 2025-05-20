@@ -573,7 +573,3 @@ if __name__ == '__main__':
                 backend_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 backend_process.kill() 
-
-
-
-                
