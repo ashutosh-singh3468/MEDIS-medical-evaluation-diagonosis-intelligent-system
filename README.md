@@ -105,8 +105,7 @@ from ml.models.disease_prediction_v2 import predict_diseases
 
 # Example usage
 symptoms = ["fever", "cough", "fatigue"]
-age_group = "ADULT"  # Options: INFANT, CHILD, TEEN, ADULT, ELDERLY
-season = "SUMMER"    # Options: SUMMER, WINTER, MONSOON, SPRING
+
 
 predictions = predict_diseases(symptoms, age_group, season)
 ```
