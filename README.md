@@ -107,7 +107,7 @@ from ml.models.disease_prediction_v2 import predict_diseases
 symptoms = ["fever", "cough", "fatigue"]
 
 
-predictions = predict_diseases(symptoms, age_group, season)
+predictions = predict_diseases(symptoms)
 ```
 ## Contributing
 1. Fork the repository
