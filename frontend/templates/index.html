@@ -152,6 +152,33 @@
         </div>
     </section>
 
+
+    <section id="platform" class="py-16 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div class="container mx-auto px-4">
+            <div class="max-w-5xl mx-auto">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-800">MEDIS Platform Intelligence</h2>
+                    <p class="text-gray-600 mt-2">Startup-grade health platform view with real-time service insight.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="platform-status-grid">
+                    <div class="bg-white rounded-xl p-5 shadow border border-blue-100">
+                        <p class="text-sm text-gray-500">Backend Proxy</p>
+                        <p id="status-backend" class="text-2xl font-bold text-gray-800 mt-1">Checking...</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-5 shadow border border-purple-100">
+                        <p class="text-sm text-gray-500">AI Assistant</p>
+                        <p id="status-ai" class="text-2xl font-bold text-gray-800 mt-1">Checking...</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-5 shadow border border-green-100">
+                        <p class="text-sm text-gray-500">Location Intelligence</p>
+                        <p id="status-location" class="text-2xl font-bold text-gray-800 mt-1">Checking...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
     <!-- Contact Section -->
     <section id="contact" class="py-20 bg-white">
         <div class="container mx-auto px-4">
@@ -430,5 +457,23 @@
             }
         });
     </script>
+
+    <script>
+        async function hydratePlatformStatus() {
+            try {
+                const response = await fetch('/api/platform-overview');
+                const data = await response.json();
+                document.getElementById('status-backend').textContent = data.services.backend_proxy.toUpperCase();
+                document.getElementById('status-ai').textContent = data.services.ai_chat.toUpperCase();
+                document.getElementById('status-location').textContent = data.services.location_intelligence.toUpperCase();
+            } catch (error) {
+                document.getElementById('status-backend').textContent = 'UNKNOWN';
+                document.getElementById('status-ai').textContent = 'UNKNOWN';
+                document.getElementById('status-location').textContent = 'UNKNOWN';
+            }
+        }
+        hydratePlatformStatus();
+    </script>
+
 </body>
 </html> 

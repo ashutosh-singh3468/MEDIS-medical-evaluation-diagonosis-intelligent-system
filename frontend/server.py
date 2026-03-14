@@ -20,6 +20,7 @@ from database.models import User, LoginHistory, get_session
 from datetime import datetime, date
 
 app = Flask(__name__, static_folder='static')
+load_dotenv()
 
 # Enable CORS properly for local development
 CORS(app, resources={
@@ -36,8 +37,16 @@ app.secret_key = os.getenv('SECRET_KEY', 'medis_default_secret_key')
 backend_process = None
 BACKEND_PORT = int(os.getenv('BACKEND_PORT', 5001))
 
-# Configure Gemini API key directly
-genai.configure(api_key='AIzaSyBxpdGmZflrGJOEQSMSL6BqEUg57FCjNoo')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+ORS_API_KEY = os.getenv('ORS_API_KEY')
+
+
+def configure_gemini() -> bool:
+    """Configure Gemini client from environment and return availability."""
+    if not GEMINI_API_KEY:
+        return False
+    genai.configure(api_key=GEMINI_API_KEY)
+    return True
 
 logger = logging.getLogger(__name__)
 
@@ -296,7 +305,9 @@ def nearby_healthcare_ors():
     data = request.get_json()
     lat = data.get('lat')
     lng = data.get('lng')
-    ORS_API_KEY = "5b3ce3597851110001cf62480b4c7f467e6045d299996beaf374a83f"
+    if not ORS_API_KEY:
+        return jsonify({'error': 'Nearby healthcare service is not configured'}), 503
+
     url = "https://api.openrouteservice.org/pois"
     headers = {
         "Authorization": ORS_API_KEY,
@@ -316,7 +327,9 @@ def nearby_healthcare_ors():
             "categories": ["healthcare.hospital", "healthcare.clinic", "healthcare.pharmacy"]
         }
     }
-    resp = requests.post(url, headers=headers, json=body)
+    resp = requests.post(url, headers=headers, json=body, timeout=15)
+    if resp.status_code != 200:
+        return jsonify({'error': 'Unable to fetch nearby healthcare', 'details': resp.text}), resp.status_code
     pois = resp.json().get('features', [])
     hospitals = []
     for poi in pois:
@@ -354,7 +367,9 @@ def nearby_pois():
     lat = data.get('lat')
     lng = data.get('lng')
     category = data.get('category', 'healthcare.hospital')  # default to hospital
-    ORS_API_KEY = "YOUR_ORS_API_KEY"
+    if not ORS_API_KEY:
+        return jsonify({'error': 'Nearby POI service is not configured'}), 503
+
     url = "https://api.openrouteservice.org/pois"
     headers = {
         "Authorization": ORS_API_KEY,
@@ -374,7 +389,9 @@ def nearby_pois():
             "categories": [category]
         }
     }
-    resp = requests.post(url, headers=headers, json=body)
+    resp = requests.post(url, headers=headers, json=body, timeout=15)
+    if resp.status_code != 200:
+        return jsonify({'error': 'Unable to fetch nearby POIs', 'details': resp.text}), resp.status_code
     pois = resp.json().get('features', [])
     results = []
     for poi in pois:
@@ -448,7 +465,11 @@ def proxy_predict():
 def test_gemini():
     try:
         # Configure the API
-        genai.configure(api_key='AIzaSyBxpdGmZflrGJOEQSMSL6BqEUg57FCjNoo')
+        if not configure_gemini():
+            return jsonify({
+                'status': 'error',
+                'message': 'Gemini API is not configured. Set GEMINI_API_KEY.'
+            }), 503
         
         # Create a simple model
         model = genai.GenerativeModel('gemini-pro')
@@ -490,7 +511,13 @@ def chat():
         
         try:
             # Configure API
-            genai.configure(api_key='AIzaSyBxpdGmZflrGJOEQSMSL6BqEUg57FCjNoo')
+            if not configure_gemini():
+                return jsonify({
+                    'response': (
+                        'MEDIS assistant is running in safe fallback mode. '
+                        'Please set GEMINI_API_KEY to enable AI chat responses.'
+                    )
+                }), 200
             
             # List available models first
             available_models = genai.list_models()
@@ -547,6 +574,27 @@ def chat():
         return jsonify({
             'error': 'An unexpected error occurred. Please try again.'
         }), 500
+
+
+@app.route('/api/platform-overview', methods=['GET'])
+def platform_overview():
+    """Small product-grade endpoint for the homepage/product panels."""
+    return jsonify({
+        'project': 'MEDIS',
+        'release': '2.0',
+        'features': [
+            'AI disease triage',
+            'Recommendation engine',
+            'Emergency support actions',
+            'Nearby healthcare discovery',
+            'Session-based prediction insights'
+        ],
+        'services': {
+            'backend_proxy': 'online',
+            'ai_chat': 'online' if bool(GEMINI_API_KEY) else 'fallback',
+            'location_intelligence': 'online' if bool(ORS_API_KEY) else 'offline'
+        }
+    })
 
 if __name__ == '__main__':
     try:

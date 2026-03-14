@@ -17,9 +17,79 @@ document.addEventListener('DOMContentLoaded', () => {
     const warningSection = document.getElementById('warningSection');
     const warningText = document.getElementById('warningText');
     const form = document.getElementById('prediction-form');
+    const healthScore = document.getElementById('healthScore');
+    const healthScoreLabel = document.getElementById('healthScoreLabel');
+    const recentPredictions = document.getElementById('recentPredictions');
+    const clearPredictionHistoryBtn = document.getElementById('clearPredictionHistoryBtn');
 
     // Set to store symptoms
     window.symptoms = new Set();
+
+
+    function getSeverityWeight(symptomText) {
+        const symptom = symptomText.toLowerCase();
+        const highRiskKeywords = ['chest pain', 'shortness of breath', 'severe', 'faint', 'blood', 'unconscious'];
+        const mediumRiskKeywords = ['fever', 'vomiting', 'dizziness', 'fatigue', 'dehydration'];
+
+        if (highRiskKeywords.some(k => symptom.includes(k))) return 20;
+        if (mediumRiskKeywords.some(k => symptom.includes(k))) return 10;
+        return 5;
+    }
+
+    function updateHealthScore() {
+        if (!healthScore || !healthScoreLabel) return;
+        const selected = Array.from(window.symptoms);
+        if (!selected.length) {
+            healthScore.textContent = '--';
+            healthScoreLabel.textContent = 'Add symptoms for live triage scoring.';
+            return;
+        }
+
+        const raw = selected.reduce((sum, symptom) => sum + getSeverityWeight(symptom), 0);
+        const score = Math.min(100, raw);
+        healthScore.textContent = String(score);
+
+        if (score >= 70) {
+            healthScoreLabel.textContent = 'High priority: seek medical consultation quickly.';
+            healthScore.className = 'text-4xl font-bold text-red-600 mt-2';
+        } else if (score >= 40) {
+            healthScoreLabel.textContent = 'Moderate priority: monitor and consult if symptoms persist.';
+            healthScore.className = 'text-4xl font-bold text-yellow-600 mt-2';
+        } else {
+            healthScoreLabel.textContent = 'Low to moderate risk based on current symptom set.';
+            healthScore.className = 'text-4xl font-bold text-green-600 mt-2';
+        }
+    }
+
+    function renderRecentPredictions() {
+        if (!recentPredictions) return;
+        const saved = JSON.parse(localStorage.getItem('medis_recent_predictions') || '[]');
+        if (!saved.length) {
+            recentPredictions.innerHTML = '<p>No predictions yet. Run your first analysis.</p>';
+            return;
+        }
+
+        recentPredictions.innerHTML = saved.map(item => `
+            <div class="border border-gray-100 rounded-lg p-3 bg-gray-50">
+                <p class="font-semibold text-gray-800">${item.disease} <span class="text-xs text-gray-500">(${item.confidence}%)</span></p>
+                <p class="text-xs text-gray-500 mt-1">Symptoms: ${item.symptoms}</p>
+                <p class="text-xs text-gray-400 mt-1">${item.timestamp}</p>
+            </div>
+        `).join('');
+    }
+
+    function savePredictionSnapshot(prediction, symptoms) {
+        const saved = JSON.parse(localStorage.getItem('medis_recent_predictions') || '[]');
+        saved.unshift({
+            disease: prediction.disease,
+            confidence: (prediction.confidence * 100).toFixed(1),
+            symptoms: symptoms.join(', '),
+            timestamp: new Date().toLocaleString()
+        });
+        localStorage.setItem('medis_recent_predictions', JSON.stringify(saved.slice(0, 5)));
+        renderRecentPredictions();
+    }
+
 
     // Add symptom when clicking the Add button
     if (addSymptomBtn) {
@@ -95,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Updating symptoms list with:', Array.from(window.symptoms)); // Debug
         
         symptomsList.innerHTML = '';
+        updateHealthScore();
         window.symptoms.forEach(symptom => {
             const tag = document.createElement('div');
             tag.className = 'symptom-tag';
@@ -204,6 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Display top prediction
                 if (data.predictions && data.predictions.length > 0) {
                     const topPred = data.predictions[0];
+                    savePredictionSnapshot(topPred, currentSymptoms);
                     console.log('Top prediction:', topPred); // Debug log
 
                     if (topPrediction) {
@@ -424,6 +496,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (inputContainer) {
             inputContainer.appendChild(suggestionsContainer);
         }
+    }
+
+
+    renderRecentPredictions();
+    updateHealthScore();
+
+    if (clearPredictionHistoryBtn) {
+        clearPredictionHistoryBtn.addEventListener('click', () => {
+            localStorage.removeItem('medis_recent_predictions');
+            renderRecentPredictions();
+        });
     }
 
     // Add suggested symptoms

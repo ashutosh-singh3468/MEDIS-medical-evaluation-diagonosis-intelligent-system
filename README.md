@@ -109,6 +109,34 @@ symptoms = ["fever", "cough", "fatigue"]
 
 predictions = predict_diseases(symptoms)
 ```
+
+## Quick Start (Full Stack)
+
+1. Copy environment template and set keys:
+```bash
+cp .env.example .env
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Start the frontend gateway (auto-starts backend):
+```bash
+python frontend/server.py
+```
+
+4. Open:
+- Frontend: `http://127.0.0.1:3000`
+- Backend health: `http://127.0.0.1:5001/health`
+
+## Production-Oriented Improvements Included
+- Secure-by-default API key handling via environment variables.
+- New platform status endpoint: `/api/platform-overview` for service visibility.
+- Session health score and local prediction history in prediction workflow.
+- Better failure handling for geolocation intelligence and AI chat fallback mode.
+
 ## Contributing
 1. Fork the repository
 2. Create your feature branch
